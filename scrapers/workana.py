@@ -1,58 +1,93 @@
-import time
 import requests
-from bs4 import BeautifulSoup
+import time
+import random
+from typing import List, Dict
+
+BASE_API = "https://www.workana.com/api/projects"  # pode variar (veja DevTools)
 
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    )
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "application/json, text/plain, */*",
+    "Referer": "https://www.workana.com/",
 }
 
-WORKANA_URLS = [
-    "https://www.workana.com/jobs?category=it-programming&language=pt",
-    "https://www.workana.com/jobs?category=web-mobile&language=pt",
-]
+PARAMS = {
+    "language": "pt",
+    "category": "it-programming",
+    "page": 1,
+}
 
-def scrape_workana() -> list[dict]:
+MAX_PAGES = 3
+
+
+def fetch_projects(page: int) -> dict | None:
+    try:
+        params = PARAMS.copy()
+        params["page"] = page
+
+        response = requests.get(
+            BASE_API,
+            headers=HEADERS,
+            params=params,
+            timeout=15
+        )
+
+        if response.status_code != 200:
+            print(f"[ERRO] Status {response.status_code}")
+            return None
+
+        return response.json()
+
+    except Exception as e:
+        print(f"[ERRO] {e}")
+        return None
+
+
+def scrape_workana_api() -> List[Dict]:
     leads = []
 
-    for url in WORKANA_URLS:
-        try:
-            r = requests.get(url, headers=HEADERS, timeout=15)
-            r.raise_for_status()
-            soup = BeautifulSoup(r.text, "html.parser")
+    for page in range(1, MAX_PAGES + 1):
+        print(f"[INFO] Página {page}")
 
-            cards = soup.select(".project-item, .js-project-item, article.project")
+        data = fetch_projects(page)
 
-            for card in cards:
-                titulo_el  = card.select_one("h2, h3, .project-title, [class*='title']")
-                desc_el    = card.select_one(".project-description, .description, p")
-                orcam_el   = card.select_one(".budget, .amount, [class*='budget']")
-                link_el    = card.select_one("a[href*='/job/'], a[href*='/project/']")
+        if not data:
+            continue
 
-                if not titulo_el:
-                    continue
+        projects = data.get("projects") or data.get("data") or []
 
-                titulo  = titulo_el.get_text(strip=True)
-                desc    = desc_el.get_text(strip=True)[:300] if desc_el else ""
-                orcam   = orcam_el.get_text(strip=True) if orcam_el else "Não informado"
-                href    = link_el["href"] if link_el else ""
-                link    = f"https://www.workana.com{href}" if href.startswith("/") else href or url
+        for proj in projects:
+            try:
+                titulo = proj.get("title", "").strip()
+                desc = proj.get("description", "").strip()[:300]
+
+                budget_data = proj.get("budget") or {}
+                orcamento = budget_data.get("amount") or budget_data.get("min") or "Não informado"
+
+                link = f"https://www.workana.com/job/{proj.get('slug', '')}"
 
                 leads.append({
                     "plataforma": "Workana",
-                    "empresa":    "Cliente Workana",
-                    "pedido":     f"{titulo} — {desc}".strip(" —"),
-                    "orcamento":  orcam,
-                    "link":       link,
+                    "empresa": "Cliente Workana",
+                    "pedido": f"{titulo} — {desc}".strip(" —"),
+                    "orcamento": str(orcamento),
+                    "link": link,
                 })
 
-            time.sleep(2)
+            except Exception as e:
+                print(f"[ERRO PARSE] {e}")
 
-        except Exception as e:
-            print(f"[Workana] Erro ao rastrear {url}: {e}")
+        time.sleep(random.uniform(1, 3))
 
-    print(f"[Workana] {len(leads)} leads coletados")
+    print(f"[Workana API] {len(leads)} leads coletados")
     return leads
+
+
+if __name__ == "__main__":
+    leads = scrape_workana_api()
+
+    for lead in leads:
+        print("=" * 50)
+        print(lead["pedido"])
+        print(lead["orcamento"])
+        print(lead["link"])

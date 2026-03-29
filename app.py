@@ -251,6 +251,7 @@ def api_status():
         "total_leads": len(state["leads"]),
         "ultimo_scan": state["ultimo_scan"],
         "log":         state["log"][-5:],  # últimas 5 mensagens
+        "groq_ok":     bool(GROQ_API_KEY),
     })
 
 @app.route("/api/leads")
