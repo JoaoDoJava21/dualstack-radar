@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DualStack Radar</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --purple:#7c3aed;--purple2:#a855f7;--pink:#ec4899;--blue:#3b82f6;
+  --bg:#05050f;--bg2:#0a0a1a;--bg3:#0f0f22;
+  --text:#f8f8ff;--muted:#6b7280;
+  --border:rgba(124,58,237,0.2);--glass:rgba(10,10,26,0.7);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* CANVAS BG */
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* LAYOUT */
+.shell{position:relative;z-index:1;display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{
+  width:250px;flex-shrink:0;
+  background:rgba(5,5,15,0.85);
+  border-right:1px solid var(--border);
+  backdrop-filter:blur(24px);
+  display:flex;flex-direction:column;
+  padding:28px 16px;
+  position:sticky;top:0;height:100vh;
+}
+.logo{display:flex;align-items:center;gap:12px;padding:8px 12px;margin-bottom:36px}
+.logo-icon{
+  width:42px;height:42px;border-radius:12px;
+  background:linear-gradient(135deg,var(--purple),var(--pink));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:800;color:#fff;
+  box-shadow:0 0 20px rgba(124,58,237,0.5);
+  animation:logopulse 3s ease-in-out infinite;
+}
+@keyframes logopulse{0%,100%{box-shadow:0 0 20px rgba(124,58,237,0.5)}50%{box-shadow:0 0 35px rgba(168,85,247,0.8)}}
+.logo-name{font-size:17px;font-weight:700;letter-spacing:-.4px}
+.logo-name b{background:linear-gradient(90deg,var(--purple2),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.nav-section{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;padding:0 14px;margin:20px 0 8px}
+.nav-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 14px;border-radius:12px;
+  font-size:14px;font-weight:500;color:var(--muted);
+  cursor:pointer;transition:all .2s;border:1px solid transparent;
+  position:relative;overflow:hidden;margin-bottom:2px;
+}
+.nav-item .ni{font-size:17px;width:22px;text-align:center}
+.nav-item:hover{color:var(--text);background:rgba(124,58,237,0.08);border-color:var(--border)}
+.nav-item.active{color:#fff;background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.3)}
+.nav-item.active::before{
+  content:'';position:absolute;left:0;top:20%;bottom:20%;
+  width:3px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,var(--purple),var(--pink));
+}
+.badge{margin-left:auto;background:rgba(124,58,237,0.25);color:var(--purple2);font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+.badge.green{background:rgba(16,185,129,0.15);color:#10b981}
+
+.sidebar-footer{margin-top:auto;padding:14px;background:rgba(124,58,237,0.06);border:1px solid var(--border);border-radius:16px}
+.sf-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;animation:pdot 1.5s ease-in-out infinite}
+@keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.sf-label{font-size:11px;color:#10b981;font-weight:600}
+.sf-time{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* MAIN */
+.main{flex:1;padding:40px 36px;overflow-y:auto}
+
+/* HEADER */
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;animation:fadeup .6s ease both}
+@keyframes fadeup{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.page-title{font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1.1}
+.page-title span{background:linear-gradient(90deg,#a855f7,#ec4899,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.page-sub{font-size:14px;color:var(--muted);margin-top:6px}
+
+.btn-scan{
+  background:linear-gradient(135deg,var(--purple),var(--pink));
+  color:#fff;border:none;padding:14px 26px;border-radius:14px;
+  font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;gap:8px;
+  transition:all .25s;position:relative;overflow:hidden;
+  box-shadow:0 4px 24px rgba(124,58,237,0.35);
+}
+.btn-scan::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,var(--pink),var(--blue));
+  opacity:0;transition:opacity .3s;
+}
+.btn-scan:hover::after{opacity:1}
+.btn-scan:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,58,237,0.5)}
+.btn-scan:active{transform:translateY(0)}
+.btn-scan span,.btn-scan svg{position:relative;z-index:1}
+.btn-scan svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s}
+.btn-scan:hover svg{transform:rotate(180deg)}
+.btn-scan.scanning{animation:scanbtn .8s ease-in-out infinite alternate}
+@keyframes scanbtn{from{box-shadow:0 4px 24px rgba(124,58,237,.35)}to{box-shadow:0 4px 40px rgba(236,72,153,.6)}}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;animation:fadeup .6s ease .1s both}
+.stat-card{
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:18px;padding:20px;backdrop-filter:blur(16px);
+  position:relative;overflow:hidden;cursor:default;
+  transition:all .25s;
+}
+.stat-card::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(124,58,237,0.05),transparent);
+  opacity:0;transition:opacity .3s;
+}
+.stat-card:hover{border-color:rgba(124,58,237,.4);transform:translateY(-3px)}
+.stat-card:hover::before{opacity:1}
+.stat-label{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.stat-label .ico{font-size:14px}
+.stat-val{font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1}
+.stat-val.purple{background:linear-gradient(90deg,var(--purple2),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-val.green{color:#10b981}
+.stat-val.blue{color:#60a5fa}
+.stat-val.pink{color:#f472b6}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:6px}
+.stat-glow{position:absolute;bottom:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:.06;pointer-events:none}
+
+/* SECTION HEADER */
+.sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.sec-title{font-size:16px;font-weight:700}
+.sec-badge{font-size:11px;color:var(--purple2);background:rgba(124,58,237,.12);padding:4px 12px;border-radius:20px;border:1px solid rgba(124,58,237,.2)}
+
+/* PLATFORM PILLS */
+.platforms{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;animation:fadeup .6s ease .2s both}
+.plat-pill{
+  padding:8px 16px;border-radius:30px;font-size:12px;font-weight:600;
+  border:1px solid var(--border);color:var(--muted);cursor:pointer;
+  transition:all .2s;background:var(--glass);backdrop-filter:blur(8px);
+}
+.plat-pill:hover,.plat-pill.on{color:#fff;border-color:var(--purple);background:rgba(124,58,237,.15);box-shadow:0 0 12px rgba(124,58,237,.2)}
+.plat-pill.on{color:var(--purple2)}
+
+/* SCAN PROGRESS */
+#scan-bar{
+  background:var(--glass);border:1px solid var(--border);border-radius:16px;
+  padding:20px;margin-bottom:24px;display:none;
+  animation:fadeup .3s ease both;
+}
+.scan-label{font-size:13px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.scan-label .dot{width:8px;height:8px;border-radius:50%;background:var(--purple2);animation:pdot 1s infinite}
+.progress-track{height:6px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--pink),var(--blue));border-radius:99px;width:0;transition:width .4s ease;box-shadow:0 0 10px rgba(124,58,237,.6)}
+.scan-steps{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.scan-step{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);color:var(--muted);transition:all .3s}
+.scan-step.done{color:#10b981;border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.08)}
+.scan-step.active{color:var(--purple2);border-color:rgba(124,58,237,.4);background:rgba(124,58,237,.1);animation:stepanim .8s ease infinite alternate}
+@keyframes stepanim{from{box-shadow:0 0 0 rgba(124,58,237,0)}to{box-shadow:0 0 10px rgba(124,58,237,.3)}}
+
+/* LEADS */
+.leads-grid{display:flex;flex-direction:column;gap:14px;animation:fadeup .6s ease .3s both}
+.lead-card{
+  background:var(--glass);border:1px solid var(--border);
+  border-radius:20px;padding:24px;backdrop-filter:blur(16px);
+  transition:all .3s;position:relative;overflow:hidden;
+  animation:cardin .5s ease both;
+}
+@keyframes cardin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.lead-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--purple),var(--pink));
+  border-radius:0 0 0 20px;
+}
+.lead-card:hover{border-color:rgba(124,58,237,.4);transform:translateX(4px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.lead-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:12px}
+.lead-plat{
+  font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;
+  letter-spacing:.5px;text-transform:uppercase;
+}
+.plat-workana{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.plat-freelas{background:rgba(16,185,129,.1);color:#34d399;border:1px solid rgba(16,185,129,.2)}
+.plat-reddit{background:rgba(255,69,0,.1);color:#fb923c;border:1px solid rgba(255,69,0,.2)}
+.plat-github{background:rgba(255,255,255,.06);color:#d1d5db;border:1px solid rgba(255,255,255,.1)}
+.lead-time{font-size:11px;color:var(--muted)}
+.lead-title{font-size:15px;font-weight:600;line-height:1.4;margin-bottom:8px}
+.lead-link{
+  font-size:12px;color:var(--purple2);text-decoration:none;
+  display:inline-flex;align-items:center;gap:4px;margin-bottom:14px;
+  transition:color .2s;
+}
+.lead-link:hover{color:var(--pink)}
+.lead-link svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.proposal-box{
+  background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.12);
+  border-radius:14px;padding:16px;
+}
+.proposal-label{font-size:10px;font-weight:700;color:var(--purple2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.proposal-label::before{content:'';display:inline-block;width:16px;height:1px;background:var(--purple2)}
+.proposal-text{font-size:13px;color:#d1d5db;line-height:1.65}
+.lead-actions{display:flex;gap:8px;margin-top:14px}
+.btn-act{
+  padding:8px 16px;border-radius:10px;font-size:12px;font-weight:600;
+  font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:all .2s;border:1px solid;
+  display:flex;align-items:center;gap:6px;
+}
+.btn-open{background:transparent;color:var(--purple2);border-color:rgba(124,58,237,.3)}
+.btn-open:hover{background:rgba(124,58,237,.1);border-color:var(--purple)}
+.btn-copy{background:transparent;color:var(--muted);border-color:rgba(255,255,255,.08)}
+.btn-copy:hover{color:#fff;border-color:rgba(255,255,255,.2)}
+.btn-copy.copied{color:#10b981;border-color:rgba(16,185,129,.3)}
+
+/* EMPTY STATE */
+.empty{
+  text-align:center;padding:80px 20px;
+  animation:fadeup .5s ease both;
+}
+.empty-icon{font-size:56px;margin-bottom:16px;filter:grayscale(1);opacity:.4}
+.empty-title{font-size:18px;font-weight:600;color:var(--muted);margin-bottom:8px}
+.empty-sub{font-size:14px;color:var(--muted);opacity:.6}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(124,58,237,.3);border-radius:99px}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">&lt;/&gt;</div>
+      <div class="logo-name"><b>DualStack</b></div>
+    </div>
+
+    <div class="nav-section">Menu</div>
+    <div class="nav-item active" onclick="setPage(this)">
+      <span class="ni">⚡</span> Radar
+      <span class="badge green" id="live-count">0</span>
+    </div>
+    <div class="nav-item" onclick="setPage(this)">
+      <span class="ni">📋</span> Histórico
+      <span class="badge" id="hist-count">0</span>
+    </div>
+    <div class="nav-item" onclick="setPage(this)">
+      <span class="ni">✏️</span> Template
+    </div>
+    <div class="nav-item" onclick="setPage(this)">
+      <span class="ni">⚙️</span> Config
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sf-status">
+        <div class="pulse-dot"></div>
+        <span>Sistema</span>
+      </div>
+      <div class="sf-label" id="sf-label">Pronto</div>
+      <div class="sf-time" id="sf-time">Último scan: —</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Lead <span>Radar</span></div>
+        <div class="page-sub">DualStack Solutions — João Victor & Carlos</div>
+      </div>
+      <button class="btn-scan" id="btn-scan" onclick="iniciarScan()">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span id="btn-label">Iniciar Scan</span>
+      </button>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label"><span class="ico">🎯</span> Leads encontrados</div>
+        <div class="stat-val purple" id="st-total">0</div>
+        <div class="stat-sub">nesta sessão</div>
+        <div class="stat-glow" style="background:var(--purple)"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><span class="ico">🤖</span> Propostas geradas</div>
+        <div class="stat-val green" id="st-prop">0</div>
+        <div class="stat-sub">pelo Groq / Llama 3.3</div>
+        <div class="stat-glow" style="background:#10b981"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><span class="ico">🌐</span> Plataformas</div>
+        <div class="stat-val blue">3</div>
+        <div class="stat-sub">ativas no scan</div>
+        <div class="stat-glow" style="background:#3b82f6"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><span class="ico">💡</span> Intervalo</div>
+        <div class="stat-val pink">30<span style="font-size:16px;color:var(--muted)">min</span></div>
+        <div class="stat-sub">ciclo automático</div>
+        <div class="stat-glow" style="background:#ec4899"></div>
+      </div>
+    </div>
+
+    <!-- PLATFORM PILLS -->
+    <div class="platforms">
+      <div class="plat-pill on" onclick="togglePlat(this)">⚡ Todos</div>
+      <div class="plat-pill on" onclick="togglePlat(this)">🔵 Workana</div>
+      <div class="plat-pill on" onclick="togglePlat(this)">🟢 99Freelas</div>
+      <div class="plat-pill on" onclick="togglePlat(this)">🟠 Reddit</div>
+      <div class="plat-pill on" onclick="togglePlat(this)">⚫ GitHub</div>
+    </div>
+
+    <!-- SCAN PROGRESS BAR -->
+    <div id="scan-bar">
+      <div class="scan-label"><div class="dot"></div><span id="scan-msg">Iniciando scan...</span></div>
+      <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
+      <div class="scan-steps">
+        <div class="scan-step" id="st-workana">Workana</div>
+        <div class="scan-step" id="st-freelas">99Freelas</div>
+        <div class="scan-step" id="st-reddit">Reddit</div>
+        <div class="scan-step" id="st-github">GitHub</div>
+        <div class="scan-step" id="st-groq">Groq IA</div>
+      </div>
+    </div>
+
+    <!-- LEADS -->
+    <div class="sec-header">
+      <div class="sec-title">Leads capturados</div>
+      <div class="sec-badge" id="leads-badge">0 resultados</div>
+    </div>
+    <div class="leads-grid" id="leads-grid">
+      <div class="empty" id="empty-state">
+        <div class="empty-icon">⚡</div>
+        <div class="empty-title">Nenhum lead ainda</div>
+        <div class="empty-sub">Clique em "Iniciar Scan" para começar</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── CANVAS BG (raios de luz igual ao site deles) ─────────
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, rays = [];
+
+function resize(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function mkRay(){
+  return {
+    x: Math.random() * W * 1.5 - W * 0.25,
+    y: H + 50,
+    angle: -Math.PI/2 + (Math.random()-.5)*.8,
+    len: 300 + Math.random()*400,
+    speed: .3 + Math.random()*.4,
+    width: .5 + Math.random()*2,
+    alpha: .03 + Math.random()*.08,
+    color: Math.random() > .5
+      ? `rgba(124,58,237,`
+      : Math.random() > .5 ? `rgba(168,85,247,` : `rgba(59,130,246,`,
+    progress: Math.random(),
+    life: Math.random(),
+  };
+}
+
+for(let i=0;i<35;i++) rays.push(mkRay());
+
+function drawRays(){
+  ctx.clearRect(0,0,W,H);
+  rays.forEach(r=>{
+    r.life += r.speed * .003;
+    if(r.life > 1){ Object.assign(r, mkRay()); r.life=0; }
+    const fade = Math.sin(r.life * Math.PI);
+    const x2 = r.x + Math.cos(r.angle)*r.len;
+    const y2 = r.y + Math.sin(r.angle)*r.len;
+    const g = ctx.createLinearGradient(r.x,r.y,x2,y2);
+    g.addColorStop(0,r.color+'0)');
+    g.addColorStop(.3,r.color+(r.alpha*fade)+')');
+    g.addColorStop(.7,r.color+(r.alpha*fade*.5)+')');
+    g.addColorStop(1,r.color+'0)');
+    ctx.beginPath();
+    ctx.moveTo(r.x,r.y);
+    ctx.lineTo(x2,y2);
+    ctx.strokeStyle=g;
+    ctx.lineWidth=r.width;
+    ctx.stroke();
+  });
+  requestAnimationFrame(drawRays);
+}
+drawRays();
+
+// ── MOUSE PARALLAX ────────────────────────────────────────
+let mx=0,my=0;
+document.addEventListener('mousemove',e=>{
+  mx=(e.clientX/window.innerWidth-.5)*20;
+  my=(e.clientY/window.innerHeight-.5)*20;
+  canvas.style.transform=`translate(${mx*.3}px,${my*.3}px)`;
+});
+
+// ── NAV ───────────────────────────────────────────────────
+function setPage(el){
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function togglePlat(el){ el.classList.toggle('on'); }
+
+// ── SCAN ──────────────────────────────────────────────────
+let scanning = false;
+let totalLeads = 0;
+let totalProps = 0;
+let allLeads = [];
+
+const mockLeads = [
+  {plat:"Workana",title:"Preciso de desenvolvedor Python para automação de relatórios",link:"https://www.workana.com/job/automacao-python",proposal:"Olá! Vi que você precisa de automação em Python para relatórios. Isso é exatamente o que fazemos. Na DualStack, já entregamos soluções assim em poucos dias — rápido, limpo e sem enrolação. Quer conversar? 😊\n\nJoão Victor & Carlos | DualStack\nWhatsApp: (71) 98183-3678\nPortfólio: dualstack.netlify.app"},
+  {plat:"99Freelas",title:"Especialista em landing page para lançamento de produto digital",link:"https://www.99freelas.com.br/project/landing-page-produto",proposal:"Oi! Vimos que você precisa de uma landing page de alto impacto para seu lançamento. Criamos páginas que convertem — rápidas, bonitas e otimizadas. Bora bater um papo sem compromisso?\n\nJoão Victor & Carlos | DualStack\nWhatsApp: (71) 98183-3678\nPortfólio: dualstack.netlify.app"},
+  {plat:"Reddit",title:"[forhire] Looking for WhatsApp bot developer for e-commerce notifications",link:"https://reddit.com/r/forhire/bot-developer",proposal:"Hey! We saw you're looking for a WhatsApp bot developer. That's our specialty at DualStack — we build fast, reliable bots for e-commerce. Let's talk!\n\nJoão Victor & Carlos | DualStack\nWhatsApp: +55 (71) 98183-3678\nPortfolio: dualstack.netlify.app"},
+  {plat:"99Freelas",title:"Sistema web completo para gestão de clientes — orçamento R$ 3.000",link:"https://www.99freelas.com.br/project/sistema-gestao",proposal:"Olá! Projeto de sistema de gestão com R$3.000 de orçamento? Perfeito — é exatamente nossa faixa. Fazemos front + back completo, com dashboard e API. Quer conversar hoje?\n\nJoão Victor & Carlos | DualStack\nWhatsApp: (71) 98183-3678\nPortfólio: dualstack.netlify.app"},
+];
+
+const platClass = {
+  "Workana":"plat-workana",
+  "99Freelas":"plat-freelas",
+  "Reddit":"plat-reddit",
+  "GitHub":"plat-github",
+};
+
+async function iniciarScan(){
+  if(scanning) return;
+  scanning = true;
+  const btn = document.getElementById('btn-scan');
+  const lbl = document.getElementById('btn-label');
+  btn.classList.add('scanning');
+  lbl.textContent = 'Escaneando...';
+  document.getElementById('sf-label').textContent = 'Rodando scan...';
+
+  // show bar
+  const bar = document.getElementById('scan-bar');
+  bar.style.display = 'block';
+
+  const steps = [
+    {id:'st-workana', label:'Rastreando Workana...', prog:20},
+    {id:'st-freelas', label:'Rastreando 99Freelas...', prog:45},
+    {id:'st-reddit',  label:'Rastreando Reddit...', prog:65},
+    {id:'st-github',  label:'Rastreando GitHub...', prog:80},
+    {id:'st-groq',    label:'Gerando propostas com Groq IA...', prog:95},
+  ];
+
+  // clear prev active
+  steps.forEach(s=>{ const el=document.getElementById(s.id); el.classList.remove('active','done'); });
+  document.getElementById('empty-state')?.remove();
+
+  for(let i=0;i<steps.length;i++){
+    const s = steps[i];
+    const el = document.getElementById(s.id);
+    el.classList.add('active');
+    document.getElementById('scan-msg').textContent = s.label;
+    document.getElementById('prog-fill').style.width = s.prog+'%';
+    await sleep(900 + Math.random()*600);
+    el.classList.remove('active');
+    el.classList.add('done');
+  }
+
+  document.getElementById('prog-fill').style.width = '100%';
+  document.getElementById('scan-msg').textContent = '✓ Scan completo!';
+
+  await sleep(400);
+
+  // add leads
+  const subset = mockLeads.slice(0, 2 + Math.floor(Math.random()*3));
+  for(let i=0;i<subset.length;i++){
+    await sleep(300);
+    addLeadCard(subset[i], i);
+    totalLeads++;
+    totalProps++;
+    document.getElementById('st-total').textContent = totalLeads;
+    document.getElementById('st-prop').textContent = totalProps;
+    document.getElementById('live-count').textContent = totalLeads;
+    document.getElementById('leads-badge').textContent = totalLeads + ' resultado' + (totalLeads!==1?'s':'');
+  }
+
+  await sleep(800);
+  bar.style.display = 'none';
+
+  const now = new Date();
+  document.getElementById('sf-time').textContent =
+    'Último scan: ' + now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  document.getElementById('sf-label').textContent = 'Online';
+  btn.classList.remove('scanning');
+  lbl.textContent = 'Novo Scan';
+  scanning = false;
+}
+
+function addLeadCard(lead, idx){
+  const grid = document.getElementById('leads-grid');
+  const pc = platClass[lead.plat] || 'plat-github';
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  const card = document.createElement('div');
+  card.className = 'lead-card';
+  card.style.animationDelay = (idx*0.1)+'s';
+  card.innerHTML = `
+    <div class="lead-top">
+      <span class="lead-plat ${pc}">${lead.plat}</span>
+      <span class="lead-time">Agora · ${time}</span>
+    </div>
+    <div class="lead-title">${lead.title}</div>
+    <a class="lead-link" href="${lead.link}" target="_blank">
+      <svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      ${lead.link.replace('https://','').substring(0,55)}...
+    </a>
+    <div class="proposal-box">
+      <div class="proposal-label">Proposta gerada pela IA</div>
+      <div class="proposal-text">${lead.proposal.replace(/\n/g,'<br>')}</div>
+    </div>
+    <div class="lead-actions">
+      <button class="btn-act btn-open" onclick="window.open('${lead.link}','_blank')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Ver projeto
+      </button>
+      <button class="btn-act btn-copy" onclick="copiarProposta(this,'${encodeURIComponent(lead.proposal)}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copiar proposta
+      </button>
+    </div>
+  `;
+  grid.insertBefore(card, grid.firstChild);
+}
+
+function copiarProposta(btn, encoded){
+  const text = decodeURIComponent(encoded);
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado!`;
+    setTimeout(()=>{
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar proposta`;
+    },2000);
+  });
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+</script>
+</body>
+</html>
