@@ -81,7 +81,7 @@ KEYWORDS = [
 ]
 
 # ── FILTRO DE QUALIDADE ───────────────────────────────────────
-SCORE_MINIMO = 55       # Só notifica leads com score >= 55
+SCORE_MINIMO = 20       # Só notifica leads com score >= 55
 INTERVALO_MINUTOS = 30  # Roda a cada 30 minutos
 MAX_LEADS_POR_CICLO = 10 # Máximo de notificações por ciclo
 
