@@ -1,0 +1,192 @@
+/* ==============================================================
+   auth.css — DualStack Radar
+   Estilos das páginas de Login e Cadastro
+   ============================================================== */
+
+/* 1. LAYOUT CENTRALIZADO */
+.auth-shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* 2. CARD DE AUTH */
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(10, 10, 26, 0.75);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 40px 36px;
+  backdrop-filter: blur(24px);
+  animation: fadein .5s ease both;
+}
+
+/* 3. TOPO DO CARD */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.auth-logo-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+  animation: logopulse 3s ease-in-out infinite;
+}
+.auth-logo-text { font-size: 18px; font-weight: 700; letter-spacing: -.4px; }
+.auth-logo-text b {
+  background: linear-gradient(90deg, var(--purple2), var(--pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.auth-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -.6px;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.auth-title span {
+  background: linear-gradient(90deg, var(--purple2), var(--pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.auth-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 28px;
+}
+
+/* 4. FORMULÁRIO */
+.auth-form { display: flex; flex-direction: column; gap: 16px; }
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+
+.form-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  transition: all .2s;
+  outline: none;
+  width: 100%;
+}
+.form-input::placeholder { color: var(--muted); opacity: .6; }
+.form-input:focus {
+  border-color: rgba(124, 58, 237, .5);
+  background: rgba(124, 58, 237, .05);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, .1);
+}
+
+/* 5. BOTÃO DE SUBMIT */
+.btn-auth {
+  background: linear-gradient(135deg, var(--purple), var(--pink));
+  color: #fff;
+  border: none;
+  padding: 15px;
+  border-radius: 13px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  transition: all .25s;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(124, 58, 237, 0.35);
+  margin-top: 4px;
+}
+.btn-auth::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--pink), var(--blue));
+  opacity: 0;
+  transition: opacity .3s;
+}
+.btn-auth:hover::after { opacity: 1; }
+.btn-auth:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(124, 58, 237, 0.5); }
+.btn-auth:active { transform: translateY(0); }
+.btn-auth span { position: relative; z-index: 1; }
+
+/* 6. DIVIDER */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* 7. RODAPÉ DO CARD */
+.auth-footer {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.auth-footer a {
+  color: var(--purple2);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color .2s;
+}
+.auth-footer a:hover { color: var(--pink); }
+
+/* 8. BADGE DE STATUS NO TOPO */
+.auth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(124, 58, 237, .1);
+  border: 1px solid rgba(124, 58, 237, .2);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--purple2);
+  margin-bottom: 20px;
+}
+.auth-badge .dot-sm {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  animation: pdot 1.5s ease-in-out infinite;
+}

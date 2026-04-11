@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Login — DualStack Radar{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="auth-shell">
+  <div class="auth-card">
+
+    <!-- Logo -->
+    <div class="auth-logo">
+      <div class="auth-logo-icon">&lt;/&gt;</div>
+      <div class="auth-logo-text"><b>DualStack</b></div>
+    </div>
+
+    <!-- Badge de status -->
+    <div class="auth-badge">
+      <span class="dot-sm"></span>
+      Sistema online
+    </div>
+
+    <!-- Título -->
+    <div class="auth-title">Bem-vindo de <span>volta</span></div>
+    <div class="auth-subtitle">Acesse o painel de leads da DualStack</div>
+
+    <!-- Formulário -->
+    <form class="auth-form" onsubmit="return false">
+
+      <div class="form-group">
+        <label class="form-label" for="email">E-mail</label>
+        <input
+          class="form-input"
+          type="email"
+          id="email"
+          name="email"
+          placeholder="voce@email.com"
+          autocomplete="email"
+        >
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Senha</label>
+        <input
+          class="form-input"
+          type="password"
+          id="password"
+          name="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+        >
+      </div>
+
+      <button class="btn-auth" type="submit">
+        <span>Entrar no Radar</span>
+      </button>
+
+    </form>
+
+    <!-- Rodapé -->
+    <div class="auth-footer">
+      Não tem conta? <a href="{{ url_for('register') }}">Criar conta</a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

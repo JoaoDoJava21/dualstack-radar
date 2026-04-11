@@ -1,0 +1,46 @@
+/* ==============================================================
+   animations.css — DualStack Radar
+   Todos os @keyframes usados na aplicação
+   ============================================================== */
+
+/* Pulso suave na sombra do ícone do logo */
+@keyframes logopulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.5); }
+  50%       { box-shadow: 0 0 35px rgba(168, 85, 247, 0.8); }
+}
+
+/* Entrada suave vinda de baixo */
+@keyframes fadeup {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Pulso do indicador de atividade (ponto verde) */
+@keyframes pdot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(.8); }
+}
+
+/* Pulso de sombra do botão durante scan ativo */
+@keyframes scanbtn {
+  from { box-shadow: 0 4px 24px rgba(124, 58, 237, .35); }
+  to   { box-shadow: 0 4px 40px rgba(236, 72, 153, .6);  }
+}
+
+/* Etapa do scan em andamento */
+@keyframes stepanim {
+  from { box-shadow: 0 0 0 rgba(124, 58, 237, 0); }
+  to   { box-shadow: 0 0 10px rgba(124, 58, 237, .3); }
+}
+
+/* Entrada do card de lead: slide da direita */
+@keyframes cardin {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Entrada suave para elementos de auth */
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(32px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}

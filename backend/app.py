@@ -5,21 +5,27 @@ Conecta dashboard.html com scrapers reais + Groq IA
 Instalar:
   pip install flask
 
-Rodar:
-  python app.py
+Rodar (a partir da raiz do projeto):
+  python backend/app.py
   Abre: http://localhost:5000
 """
 
 from flask import Flask, jsonify, render_template, Response
 import os, requests, time, hashlib, json, threading
+from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-load_dotenv()
+# Carrega .env da raiz do projeto (um nível acima de backend/)
+load_dotenv(Path(__file__).parent.parent / '.env')
 
-app = Flask(__name__, template_folder=".")
+# Templates e static ficam em frontend/, um nível acima
+_root = Path(__file__).parent.parent
+app = Flask(__name__,
+            template_folder=str(_root / "frontend" / "templates"),
+            static_folder=str(_root / "frontend" / "static"))
 GROQ_API_KEYS = [k for k in [
     os.getenv("GROQ_API_KEY"),
     os.getenv("GROQ_API_KEY_2"),
@@ -336,6 +342,14 @@ def rodar_scan():
 @app.route("/")
 def index():
     return render_template("dashboard.html")
+
+@app.route("/login")
+def login():
+    return render_template("login.html")
+
+@app.route("/register")
+def register():
+    return render_template("register.html")
 
 @app.route("/api/scan", methods=["POST"])
 def api_scan():

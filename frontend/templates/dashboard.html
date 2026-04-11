@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}DualStack Radar{% endblock %}
+
+{% block content %}
+
+<div class="shell">
+
+  <!-- ============================================================
+       SIDEBAR — Navegação lateral
+       ============================================================ -->
+  <aside class="sidebar">
+
+    <!-- Logotipo -->
+    <div class="logo">
+      <div class="logo-icon">&lt;/&gt;</div>
+      <div class="logo-name"><b>DualStack</b></div>
+    </div>
+
+    <!-- Item: Radar -->
+    <div class="nav-item active" data-page="radar" onclick="setPage(this)">
+      <span class="ni">⚡</span> Radar
+      <span class="badge green" id="live-count">0</span>
+    </div>
+
+    <!-- Item: Histórico -->
+    <div class="nav-item" data-page="historico" onclick="setPage(this)">
+      <span class="ni">📋</span> Histórico
+      <span class="badge" id="hist-count">0</span>
+    </div>
+
+    <!-- Item: Template -->
+    <div class="nav-item" data-page="template" onclick="setPage(this)">
+      <span class="ni">✏️</span> Template
+    </div>
+
+    <!-- Item: Config -->
+    <div class="nav-item" data-page="config" onclick="setPage(this)">
+      <span class="ni">⚙️</span> Config
+    </div>
+
+    <!-- Rodapé: status do sistema -->
+    <div class="sidebar-footer">
+      <div class="sf-status">
+        <div class="pulse-dot"></div>
+        <span>Sistema</span>
+      </div>
+      <div class="sf-label" id="sf-label">Pronto</div>
+      <div class="sf-time" id="sf-time">Último scan: —</div>
+    </div>
+
+  </aside>
+
+
+  <!-- ============================================================
+       ÁREA PRINCIPAL
+       ============================================================ -->
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div>
+        <div class="page-title">Lead <span>Radar</span></div>
+        <div class="page-sub">DualStack Solutions — João Victor &amp; Carlos</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn-clear" id="btn-clear" onclick="limparLeads()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Limpar
+        </button>
+        <button class="btn-scan" id="btn-scan" onclick="iniciarScan()">
+          <svg viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <span id="btn-label">Iniciar Scan</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Página: Radar -->
+    <div id="page-radar">
+
+      <!-- Estatísticas -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label"><span class="ico">🎯</span> Leads encontrados</div>
+          <div class="stat-val purple" id="st-total">0</div>
+          <div class="stat-sub">nesta sessão</div>
+          <div class="stat-glow" style="background:var(--purple)"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="ico">🤖</span> Propostas geradas</div>
+          <div class="stat-val green" id="st-prop">0</div>
+          <div class="stat-sub">pelo Groq / Llama 3.3</div>
+          <div class="stat-glow" style="background:#10b981"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="ico">🌐</span> Plataformas</div>
+          <div class="stat-val blue">4</div>
+          <div class="stat-sub">ativas no scan</div>
+          <div class="stat-glow" style="background:#3b82f6"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label"><span class="ico">💡</span> Intervalo</div>
+          <div class="stat-val pink">30<span style="font-size:16px;color:var(--muted)">min</span></div>
+          <div class="stat-sub">ciclo automático</div>
+          <div class="stat-glow" style="background:#ec4899"></div>
+        </div>
+      </div>
+
+      <!-- Filtros de plataforma -->
+      <div class="platforms">
+        <div class="plat-pill on" onclick="togglePlat(this,'todos')">⚡ Todos</div>
+        <div class="plat-pill on" onclick="togglePlat(this,'Workana')">🔵 Workana</div>
+        <div class="plat-pill on" onclick="togglePlat(this,'99Freelas')">🟢 99Freelas</div>
+        <div class="plat-pill on" onclick="togglePlat(this,'Reddit')">🟠 Reddit</div>
+        <div class="plat-pill on" onclick="togglePlat(this,'GitHub')">⚫ GitHub</div>
+      </div>
+
+      <!-- Barra de progresso -->
+      <div id="scan-bar">
+        <div class="scan-label">
+          <div class="dot"></div>
+          <span id="scan-msg">Iniciando scan...</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="prog-fill"></div>
+        </div>
+        <div class="scan-steps">
+          <div class="scan-step" id="st-workana">Workana</div>
+          <div class="scan-step" id="st-freelas">99Freelas</div>
+          <div class="scan-step" id="st-reddit">Reddit</div>
+          <div class="scan-step" id="st-github">GitHub</div>
+          <div class="scan-step" id="st-groq">Groq IA</div>
+        </div>
+      </div>
+
+    </div><!-- /page-radar -->
+
+
+    <!-- Página: Template -->
+    <div id="page-template" style="display:none" class="page-section">
+      <div class="info-card">
+        <h3>System Prompt — Groq / Llama 3.3</h3>
+        <pre>Você é o assistente comercial da DualStack, equipe de TI
+freelancer formada por João Victor e Carlos. Especialistas em automações Python,
+landing pages, bots WhatsApp/Telegram, front-end, back-end, APIs e dashboards.
+Gere propostas comerciais curtas (máx 120 palavras), diretas e personalizadas.
+Tom: próximo e profissional. Termine com WhatsApp e portfólio.</pre>
+      </div>
+      <div class="info-card">
+        <h3>Variáveis injetadas por lead</h3>
+        <div class="info-row"><span class="info-key">Empresa</span><span class="info-val">Nome/usuário do cliente</span></div>
+        <div class="info-row"><span class="info-key">Pedido</span><span class="info-val">Título + descrição do projeto (máx 300 chars)</span></div>
+        <div class="info-row"><span class="info-key">Plataforma</span><span class="info-val">Workana · 99Freelas · Reddit · GitHub</span></div>
+        <div class="info-row"><span class="info-key">Assinatura</span><span class="info-val">João Victor &amp; Carlos | DualStack</span></div>
+        <div class="info-row"><span class="info-key">WhatsApp</span><span class="info-val">(71) 98183-3678</span></div>
+        <div class="info-row"><span class="info-key">Portfólio</span><span class="info-val">dualstack.netlify.app</span></div>
+      </div>
+    </div>
+
+
+    <!-- Página: Config -->
+    <div id="page-config" style="display:none" class="page-section">
+      <div class="info-card">
+        <h3>Status do Sistema</h3>
+        <div class="info-row"><span class="info-key">Modelo de IA</span><span class="info-val">Groq · llama-3.3-70b-versatile</span></div>
+        <div class="info-row"><span class="info-key">GROQ_API_KEY</span><span class="info-val" id="cfg-groq-status">Verificando...</span></div>
+        <div class="info-row"><span class="info-key">Plataformas ativas</span><span class="info-val">Workana · 99Freelas · Reddit · GitHub</span></div>
+        <div class="info-row"><span class="info-key">Intervalo de scan</span><span class="info-val">Manual (botão Iniciar Scan)</span></div>
+        <div class="info-row"><span class="info-key">Polling de status</span><span class="info-val">1,2 segundos</span></div>
+        <div class="info-row"><span class="info-key">Timeout por scraper</span><span class="info-val">10 – 15 segundos</span></div>
+      </div>
+      <div class="info-card">
+        <h3>Configuração do .env</h3>
+        <pre style="color:#a855f7">GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxx</pre>
+        <p style="margin-top:12px;font-size:12px;color:var(--muted)">
+          Crie um arquivo <strong style="color:var(--text)">.env</strong> na raiz do projeto com a chave acima.<br>
+          Obtenha sua chave em <strong style="color:var(--purple2)">console.groq.com</strong>
+        </p>
+      </div>
+    </div>
+
+
+    <!-- Lista de leads (Radar + Histórico) -->
+    <div id="leads-section">
+      <div class="sec-header">
+        <div class="sec-title" id="leads-section-title">Leads capturados</div>
+        <div class="sec-badge" id="leads-badge">0 resultados</div>
+      </div>
+      <div class="leads-grid" id="leads-grid">
+        <div class="empty" id="empty-state">
+          <div class="empty-icon">⚡</div>
+          <div class="empty-title">Nenhum lead ainda</div>
+          <div class="empty-sub">Clique em "Iniciar Scan" para começar</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</div><!-- /shell -->
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

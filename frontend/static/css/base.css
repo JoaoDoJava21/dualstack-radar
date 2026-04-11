@@ -1,0 +1,51 @@
+/* ==============================================================
+   base.css — DualStack Radar
+   Reset, CSS variables, global body/canvas styles, scrollbar
+   ============================================================== */
+
+/* 1. RESET & CSS VARIABLES */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* Paleta de cores */
+  --purple:  #7c3aed;
+  --purple2: #a855f7;
+  --pink:    #ec4899;
+  --blue:    #3b82f6;
+
+  /* Fundos */
+  --bg:      #05050f;
+  --bg2:     #0a0a1a;
+  --bg3:     #0f0f22;
+
+  /* Texto */
+  --text:    #f8f8ff;
+  --muted:   #6b7280;
+
+  /* Superfícies */
+  --border:  rgba(124, 58, 237, 0.2);
+  --glass:   rgba(10, 10, 26, 0.7);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* 2. CANVAS DE FUNDO */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 3. SCROLLBAR CUSTOMIZADA */
+::-webkit-scrollbar       { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(124, 58, 237, .3); border-radius: 99px; }
