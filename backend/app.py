@@ -29,14 +29,11 @@ app = Flask(__name__,
 GROQ_API_KEYS = [k for k in [
     os.getenv("GROQ_API_KEY"),
     os.getenv("GROQ_API_KEY_2"),
+    os.getenv("GROQ_API_KEY_3"),
+    os.getenv("GROQ_API_KEY_4"),
 ] if k]
-_key_index = 0
-
-def _next_key():
-    global _key_index
-    key = GROQ_API_KEYS[_key_index % len(GROQ_API_KEYS)]
-    _key_index += 1
-    return key
+from concurrent.futures import ThreadPoolExecutor, as_completed
+_leads_lock = threading.Lock()   # protege state["leads"] em acesso paralelo
 
 # ── estado global ─────────────────────────────────────────
 state = {
@@ -54,13 +51,12 @@ landing pages, bots WhatsApp/Telegram, front-end, back-end, APIs e dashboards.
 Gere propostas comerciais curtas (máx 120 palavras), diretas e personalizadas.
 Tom: próximo e profissional. Termine com WhatsApp e portfólio."""
 
-def gerar_proposta(empresa, pedido, plataforma):
-    if not GROQ_API_KEYS:
-        return "Configure GROQ_API_KEY no .env"
+def gerar_proposta(empresa, pedido, plataforma, key):
+    """Chama a API Groq com a chave informada (sem rotação global)."""
     try:
         r = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {_next_key()}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             json={
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
@@ -92,9 +88,11 @@ HEADERS = {
     "Accept-Language": "pt-BR,pt;q=0.9",
 }
 
-WORKANA_MAX_PAGES = 15
+WORKANA_MAX_PAGES = 100
+REDDIT_SUBS       = ["brdev", "forhire", "slavelabour", "brasil"]
+GITHUB_QUERIES    = ["python freelance", "developer wanted", "landing page developer"]
 
-def scrape_workana():
+def scrape_workana(page_start=1, page_end=WORKANA_MAX_PAGES):
     leads = []
     try:
         with sync_playwright() as pw:
@@ -102,7 +100,7 @@ def scrape_workana():
             page = browser.new_page()
             vistos = set()
 
-            for p in range(1, WORKANA_MAX_PAGES + 1):
+            for p in range(page_start, page_end + 1):
                 url = f"https://www.workana.com/jobs?category=it-programming&language=pt&page={p}"
                 page.goto(url, wait_until="networkidle", timeout=30000)
 
@@ -202,14 +200,80 @@ FREELAS99_QUERIES = [
     "automation+python","task+automation","bot+development","telegram+bot","whatsapp+bot",
     "web+automation","data+automation","scraping+python","web+scraper","extract+data",
     "dashboard+web","data+dashboard","build+dashboard","report+dashboard","analytics+dashboard"
+    "landing+page","landing+page+wordpress","landing+page+html","criacao+site","criacao+site+wordpress",
+    "site+institucional","site+empresarial","site+responsivo","site+simples","criar+site+do+zero",
+    "refatoracao+site","melhorar+site","site+profissional","site+portfolio","site+negocio",
+    "site+empresa","site+wordpress+ajuda","wordpress+site","elementor+site","site+rapido",
+    "site+lento","otimizacao+site","seo+site","ajuste+site","manutencao+site",
+
+    # 🤖 AUTOMAÇÃO
+    "automacao+python","automacao+processos","automacao+tarefas","automacao+empresa","automacao+excel",
+    "automacao+planilhas","automacao+dados","bot+whatsapp","bot+whatsapp+api","bot+telegram",
+    "bot+discord","chatbot+atendimento","chatbot+empresa","automacao+atendimento","automacao+crm",
+    "automacao+marketing","automacao+envio+mensagens","automacao+email","automacao+relatorios","rpa+python",
+    "rpa+automacao","robot+web","script+automacao","automacao+web","automacao+sistema",
+
+    # 🧠 BACKEND / SISTEMAS
+    "sistema+web","sistema+gestao","sistema+interno","sistema+empresa","sistema+customizado",
+    "erp+simples","crm+simples","crm+customizado","api+rest","api+node",
+    "api+python","backend+node","backend+python","backend+developer","desenvolvimento+backend",
+    "criar+api","api+do+zero","api+segura","api+autenticacao","api+login",
+    "sistema+login","sistema+cadastro","painel+admin","admin+dashboard","crud+web",
+
+    # 📊 DASHBOARD / DADOS
+    "dashboard+relatorio","dashboard+web","dashboard+power+bi","dashboard+python","painel+controle",
+    "painel+gestao","relatorio+automatizado","relatorio+dados","analise+dados","data+analysis",
+    "business+intelligence","bi+dashboard","grafico+web","grafico+dashboard","dashboard+tempo+real",
+    "monitoramento+dados","painel+kpi","dashboard+empresa","visualizacao+dados","report+automation",
+
+    # 🛒 E-COMMERCE
+    "loja+virtual","ecommerce+wordpress","loja+shopify","loja+woocommerce","woocommerce+ajuda",
+    "shopify+ajuda","integracao+pagamento","mercado+pago+api","pagseguro+integracao","stripe+api",
+    "checkout+customizado","carrinho+compras","pagamento+online","gateway+pagamento","integracao+loja",
+    "api+ecommerce","sync+produtos","importar+produtos","automacao+loja","gestao+loja",
+
+    # 🔌 INTEGRAÇÕES
+    "integracao+api","integracao+sistema","integracao+erp","integracao+crm","webhook+api",
+    "consumir+api","sincronizacao+dados","integracao+pagamentos","integracao+whatsapp","integracao+email",
+    "integracao+planilha","integracao+google+sheets","integracao+zapier","integracao+make","automacao+integracao",
+    "api+integration","system+integration","data+sync","automation+integration","backend+integration",
+
+    # 🕷️ SCRAPING
+    "scraping+dados","web+scraping","extracao+dados","coleta+dados","raspagem+dados",
+    "crawler+python","bot+scraping","scraper+site","dados+web","data+scraping",
+    "python+scraping","automation+scraping","scraping+ecommerce","scraping+precos","scraping+produtos",
+    "scraping+imoveis","scraping+leads","extrair+dados+site","coletar+informacoes","web+crawler",
+
+    # 💻 DEV GERAL
+    "desenvolvedor+freelancer","programador+freelancer","freelancer+python","freelancer+node","fullstack+freelancer",
+    "dev+freelancer","programador+web","dev+backend","dev+frontend","freelancer+fullstack",
+    "contratar+programador","preciso+programador","dev+urgente","freelancer+urgente","programador+urgente",
+
+    # ⚙️ BUG / URGÊNCIA (OURO)
+    "corrigir+erro+site","bug+site","erro+api","erro+backend","erro+frontend",
+    "ajuste+codigo","manutencao+codigo","codigo+bugado","resolver+bug","debug+codigo",
+    "site+quebrado","site+fora+do+ar","api+erro","problema+wordpress","erro+login",
+    "erro+servidor","bug+wordpress","falha+sistema","erro+deploy","fix+bug+website",
+
+    # 🚀 INTENÇÃO
+    "preciso+de+programador","contratar+dev","projeto+urgente","freelancer+urgente","preciso+site",
+    "preciso+bot","preciso+automacao","preciso+api","preciso+sistema","preciso+integracao",
+    "hire+developer","need+developer","urgent+project","looking+developer","backend+help",
+
+    # 🌎 INGLÊS (DINHEIRO ESCONDIDO)
+    "build+website","create+landing+page","wordpress+developer","fix+wordpress","website+bug",
+    "api+development","rest+api+developer","python+developer","node+developer","backend+api",
+    "automation+python","task+automation","bot+development","telegram+bot","whatsapp+bot",
+    "web+automation","data+automation","scraping+python","web+scraper","extract+data",
+    "dashboard+web","data+dashboard","build+dashboard","report+dashboard","analytics+dashboard"
 ]
 
 
-def scrape_99freelas():
+def scrape_99freelas(queries=None):
     leads = []
     vistos = set()
 
-    for query in FREELAS99_QUERIES:
+    for query in (queries or FREELAS99_QUERIES):
         try:
             url = f"https://www.99freelas.com.br/projects?q={query}"
             r = requests.get(url, headers=HEADERS, timeout=15)
@@ -240,9 +304,9 @@ def scrape_99freelas():
 
     return leads
 
-def scrape_reddit():
+def scrape_reddit(subreddits=None):
     leads = []
-    for sub in ["brdev", "forhire", "slavelabour", "brasil"]:
+    for sub in (subreddits or REDDIT_SUBS):
         try:
             r = requests.get(
                 f"https://www.reddit.com/r/{sub}/new.json?limit=10",
@@ -264,9 +328,9 @@ def scrape_reddit():
             state["log"].append(f"[ERRO Reddit r/{sub}] {e}")
     return leads
 
-def scrape_github():
+def scrape_github(search_queries=None):
     leads = []
-    for q in ["python freelance", "developer wanted", "landing page developer"]:
+    for q in (search_queries or GITHUB_QUERIES):
         try:
             r = requests.get(
                 f"https://api.github.com/search/issues?q={q}+label:freelance+state:open&per_page=5",
@@ -291,49 +355,138 @@ def scrape_github():
 # ── LÓGICA DE SCAN ────────────────────────────────────────
 
 _vistos: set[str] = set()
+_vistos_lock = threading.Lock()   # protege _vistos em leituras/escritas paralelas
 
 def ja_visto(link):
     h = hashlib.md5(link.encode()).hexdigest()
-    if h in _vistos: return True
-    _vistos.add(h); return False
+    with _vistos_lock:
+        if h in _vistos:
+            return True
+        _vistos.add(h)
+        return False
+
+
+def _dividir_trabalho(n):
+    """
+    Divide o trabalho dos scrapers em n fatias independentes.
+    Cada worker recebe páginas distintas do Workana, queries distintas
+    do 99Freelas, subreddits distintos e queries distintas do GitHub.
+    """
+    # Workana: blocos contíguos de páginas
+    cada = (WORKANA_MAX_PAGES + n - 1) // n          # teto da divisão
+    workana = []
+    for i in range(n):
+        start = i * cada + 1
+        end   = min((i + 1) * cada, WORKANA_MAX_PAGES)
+        workana.append((start, end) if start <= WORKANA_MAX_PAGES else None)
+
+    # 99Freelas / Reddit / GitHub: round-robin
+    freelas = [FREELAS99_QUERIES[i::n] for i in range(n)]
+    reddit  = [REDDIT_SUBS[i::n]       for i in range(n)]
+    github  = [GITHUB_QUERIES[i::n]    for i in range(n)]
+
+    return [
+        {"workana": workana[i], "freelas": freelas[i],
+         "reddit":  reddit[i],  "github":  github[i]}
+        for i in range(n)
+    ]
+
+def _worker_completo(worker_id, key, pkg):
+    """
+    Worker independente: raspa sua fatia dos scrapers + gera propostas
+    com sua chave dedicada. Insere cada lead no dashboard em tempo real.
+    """
+    locais = []
+
+    # Workana — bloco de páginas exclusivo deste worker
+    if pkg["workana"]:
+        start, end = pkg["workana"]
+        state["log"].append(f"[W{worker_id}] Workana páginas {start}–{end}...")
+        leads = scrape_workana(page_start=start, page_end=end)
+        state["log"].append(f"[W{worker_id}] Workana: {len(leads)} leads")
+        locais.extend(leads)
+
+    # 99Freelas — fatia de queries exclusiva deste worker
+    if pkg["freelas"]:
+        state["log"].append(
+            f"[W{worker_id}] 99Freelas ({len(pkg['freelas'])} queries)..."
+        )
+        leads = scrape_99freelas(queries=pkg["freelas"])
+        state["log"].append(f"[W{worker_id}] 99Freelas: {len(leads)} leads")
+        locais.extend(leads)
+
+    # Reddit — subreddits exclusivos deste worker
+    if pkg["reddit"]:
+        state["log"].append(
+            f"[W{worker_id}] Reddit ({', '.join(pkg['reddit'])})..."
+        )
+        leads = scrape_reddit(subreddits=pkg["reddit"])
+        state["log"].append(f"[W{worker_id}] Reddit: {len(leads)} leads")
+        locais.extend(leads)
+
+    # GitHub — queries exclusivas deste worker
+    if pkg["github"]:
+        state["log"].append(f"[W{worker_id}] GitHub...")
+        leads = scrape_github(search_queries=pkg["github"])
+        state["log"].append(f"[W{worker_id}] GitHub: {len(leads)} leads")
+        locais.extend(leads)
+
+    # Filtra duplicatas (thread-safe via _vistos_lock)
+    novos = [l for l in locais if not ja_visto(l["link"])]
+    state["log"].append(
+        f"[W{worker_id}] {len(novos)} leads novos → gerando propostas..."
+    )
+
+    # Gera propostas com a chave exclusiva deste worker
+    for lead in novos:
+        state["log"].append(
+            f"[W{worker_id}] Gerando proposta: {lead['pedido'][:50]}..."
+        )
+        proposta = gerar_proposta(
+            lead["empresa"], lead["pedido"], lead["plataforma"], key
+        )
+        lead["proposta"] = proposta
+        lead["hora"]     = datetime.now().strftime("%H:%M")
+        lead["id"]       = hashlib.md5(lead["link"].encode()).hexdigest()[:8]
+        with _leads_lock:
+            state["leads"].insert(0, lead)
+        time.sleep(0.3)
+
+    return len(novos)
+
 
 def rodar_scan():
     state["rodando"] = True
-    state["log"] = []
-    novos = []
+    state["log"]     = []
 
-    scrapers = [
-        ("Workana",   scrape_workana),
-        ("99Freelas", scrape_99freelas),
-        ("Reddit",    scrape_reddit),
-        ("GitHub",    scrape_github),
-    ]
+    if not GROQ_API_KEYS:
+        state["log"].append("ERRO: configure GROQ_API_KEY no .env")
+        state["rodando"] = False
+        return
 
-    todos = []
-    for nome, fn in scrapers:
-        state["log"].append(f"Rastreando {nome}...")
-        leads = fn()
-        state["log"].append(f"{nome}: {len(leads)} leads encontrados")
-        todos.extend(leads)
-        time.sleep(1)
+    n      = len(GROQ_API_KEYS)
+    pacotes = _dividir_trabalho(n)
+    state["log"].append(
+        f"Iniciando {n} worker(s) paralelo(s) — cada um raspa e gera independente"
+    )
 
-    state["log"].append(f"Total: {len(todos)} leads | Gerando propostas...")
-
-    for lead in todos:
-        if ja_visto(lead["link"]):
-            continue
-        state["log"].append(f"Gerando proposta para: {lead['pedido'][:60]}...")
-        proposta = gerar_proposta(lead["empresa"], lead["pedido"], lead["plataforma"])
-        lead["proposta"] = proposta
-        lead["hora"] = datetime.now().strftime("%H:%M")
-        lead["id"] = hashlib.md5(lead["link"].encode()).hexdigest()[:8]
-        novos.append(lead)
-        # prepend — mais recentes primeiro
-        state["leads"].insert(0, lead)
-        time.sleep(0.8)
+    with ThreadPoolExecutor(max_workers=n) as ex:
+        futures = {
+            ex.submit(_worker_completo, i + 1, GROQ_API_KEYS[i], pacotes[i]): i + 1
+            for i in range(n)
+        }
+        for future in as_completed(futures):
+            wid = futures[future]
+            try:
+                total = future.result()
+                state["log"].append(f"[Worker {wid}] concluído — {total} leads")
+            except Exception as e:
+                state["log"].append(f"[Worker {wid}] ERRO: {e}")
 
     state["ultimo_scan"] = datetime.now().strftime("%H:%M")
-    state["log"].append(f"Scan concluído — {len(novos)} novos leads")
+    state["log"].append(
+        f"Scan concluído — {len(state['leads'])} leads no total"
+    )
     state["rodando"] = False
 
 

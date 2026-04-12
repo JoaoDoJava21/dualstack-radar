@@ -1,22 +1,19 @@
 import os, requests, time, hashlib
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(Path(__file__).parent.parent.parent / '.env')
 
 GROQ_API_KEYS = [k for k in [
     os.getenv("GROQ_API_KEY"),
     os.getenv("GROQ_API_KEY_2"),
+    os.getenv("GROQ_API_KEY_3"),
+    os.getenv("GROQ_API_KEY_4"),
 ] if k]
-_key_index = 0
-
-def _next_key():
-    global _key_index
-    key = GROQ_API_KEYS[_key_index % len(GROQ_API_KEYS)]
-    _key_index += 1
-    return key
 
 SYSTEM_PROMPT = """Você é o assistente comercial da DualStack, equipe de TI
 freelancer formada por João Victor e Carlos. Especialistas em:
@@ -40,13 +37,12 @@ Plataforma: {plataforma}
 - Portfólio: dualstack.netlify.app"""
 
 
-def gerar_proposta(empresa, pedido, plataforma):
-    if not GROQ_API_KEYS:
-        return "[ Configure GROQ_API_KEY no .env com sua chave real ]"
+def gerar_proposta(empresa, pedido, plataforma, key):
+    """Gera proposta usando a chave informada (sem rotação global)."""
     try:
         r = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {_next_key()}", "Content-Type": "application/json"},
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             json={
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
@@ -372,12 +368,37 @@ def salvar(lead, proposta):
 G = "\033[92m"; C = "\033[96m"; B = "\033[1m"; X = "\033[0m"
 
 
+_print_lock = __import__("threading").Lock()  # evita saída misturada no terminal
+
+
+def _worker_cli(leads_batch, key, worker_id):
+    """Worker paralelo CLI: processa um lote com uma chave dedicada."""
+    for lead in leads_batch:
+        proposta = gerar_proposta(
+            lead["empresa"], lead["pedido"], lead["plataforma"], key
+        )
+        with _print_lock:
+            print(f"\n{'='*60}")
+            print(f"{B}[Worker {worker_id} | {lead['plataforma']}]{X}")
+            print(f"{C}Pedido:{X} {lead['pedido'][:100]}")
+            print(f"{C}Link:{X}   {lead['link']}")
+            print(f"{B}Proposta:{X}")
+            print(proposta)
+        salvar(lead, proposta)
+        time.sleep(0.3)
+
+
 def rodar():
     print(f"\n{B}{'='*60}")
-    print("   DUALSTACK RADAR — links reais dos projetos")
+    print("   DUALSTACK RADAR — execução paralela por chaves")
     print(f"   {datetime.now().strftime('%d/%m/%Y %H:%M')}")
     print(f"{'='*60}{X}\n")
 
+    if not GROQ_API_KEYS:
+        print("  [ERRO] Nenhuma GROQ_API_KEY encontrada no .env")
+        return
+
+    # ── 1. Coleta leads ────────────────────────────────────
     todos = []
     for nome, fn in [
         ("Workana",   scrape_workana),
@@ -390,26 +411,30 @@ def rodar():
         todos.extend(leads)
         time.sleep(2)
 
-    print(f"\nTotal: {len(todos)} leads\n")
+    novos = [l for l in todos if not ja_visto(l["link"])]
+    print(f"\nTotal: {len(novos)} leads novos\n")
 
-    if not todos:
-        print("Nenhum lead coletado. Os sites podem estar com bloqueio temporário.")
-        print("Tente novamente em alguns minutos.")
+    if not novos:
+        print("Nenhum lead novo. Os sites podem estar com bloqueio temporário.")
         return
 
-    for lead in todos:
-        if ja_visto(lead["link"]):
-            continue
+    # ── 2. Divide entre chaves e dispara workers ───────────
+    n       = len(GROQ_API_KEYS)
+    batches = [novos[i::n] for i in range(n)]
+    print(f"{B}Iniciando {n} worker(s) paralelo(s)...{X}\n")
 
-        print(f"\n{'='*60}")
-        print(f"{B}[{lead['plataforma']}]{X}")
-        print(f"{C}Pedido:{X} {lead['pedido'][:100]}")
-        print(f"{C}Link:{X}   {lead['link']}")
-        print(f"{B}Gerando proposta...{X}")
-        proposta = gerar_proposta(lead["empresa"], lead["pedido"], lead["plataforma"])
-        print(proposta)
-        salvar(lead, proposta)
-        time.sleep(1)
+    with ThreadPoolExecutor(max_workers=n) as ex:
+        futures = {
+            ex.submit(_worker_cli, batches[i], GROQ_API_KEYS[i], i + 1): i + 1
+            for i in range(n) if batches[i]
+        }
+        for future in as_completed(futures):
+            wid = futures[future]
+            try:
+                future.result()
+                print(f"\n{G}[Worker {wid}] concluído{X}")
+            except Exception as e:
+                print(f"\n[Worker {wid}] ERRO: {e}")
 
     print(f"\n{G}{B}Pronto! Salvo em leads_encontrados.txt{X}")
 
