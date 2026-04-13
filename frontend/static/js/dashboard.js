@@ -97,6 +97,7 @@ let totalLeads = 0;
 let totalProps = 0;
 let leadIds    = new Set();
 let pollTimer  = null;
+let areaAtual  = 'ti';
 
 const platClass = {
   'Workana':   'plat-workana',
@@ -118,10 +119,21 @@ const STEPS = [
 // 4. INICIAR SCAN — POST /api/scan
 // ================================================================
 
+function selecionarArea(el) {
+  if (scanning) return;
+  document.querySelectorAll('.area-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  areaAtual = el.dataset.area;
+}
+
 async function iniciarScan() {
   if (scanning) return;
 
-  const resp = await fetch('/api/scan', { method: 'POST' });
+  const resp = await fetch('/api/scan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ categoria: areaAtual }),
+  });
   const data = await resp.json();
   if (!data.ok) {
     alert(data.msg || 'Erro ao iniciar scan');

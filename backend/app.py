@@ -10,7 +10,7 @@ Rodar (a partir da raiz do projeto):
   Abre: http://localhost:5000
 """
 
-from flask import Flask, jsonify, render_template, Response
+from flask import Flask, jsonify, render_template, Response, request
 import os, requests, time, hashlib, json, threading
 from pathlib import Path
 from datetime import datetime
@@ -26,6 +26,7 @@ _root = Path(__file__).parent.parent
 app = Flask(__name__,
             template_folder=str(_root / "frontend" / "templates"),
             static_folder=str(_root / "frontend" / "static"))
+
 GROQ_API_KEYS = [k for k in [
     os.getenv("GROQ_API_KEY"),
     os.getenv("GROQ_API_KEY_2"),
@@ -88,11 +89,45 @@ HEADERS = {
     "Accept-Language": "pt-BR,pt;q=0.9",
 }
 
-WORKANA_MAX_PAGES = 100
-REDDIT_SUBS       = ["brdev", "forhire", "slavelabour", "brasil"]
-GITHUB_QUERIES    = ["python freelance", "developer wanted", "landing page developer"]
+WORKANA_MAX_PAGES = 1
 
-def scrape_workana(page_start=1, page_end=WORKANA_MAX_PAGES):
+# ── QUERIES POR CATEGORIA ─────────────────────────────────
+
+FREELAS99_QUERIES_ADMIN = [
+    "gestao+empresarial","gestao+projetos","gestao+equipe","administracao+empresa",
+    "assistente+administrativo","secretaria+virtual","assistente+virtual",
+    "suporte+administrativo","organizacao+empresa","gestao+documentos",
+    "financeiro+empresa","gestao+financeira","controle+financeiro","fluxo+caixa",
+    "contabilidade+freelancer","auxiliar+contabil","lancamentos+contabeis",
+    "declaracao+irpf","imposto+renda","contabilidade+online",
+    "recursos+humanos","recrutamento+selecao","gestao+pessoas","folha+pagamento",
+    "rh+freelancer","consultoria+rh","treinamento+equipe",
+    "marketing+digital","gestao+redes+sociais","social+media","copywriting",
+    "redacao+publicitaria","producao+conteudo","marketing+conteudo",
+    "gestao+trafego","google+ads","facebook+ads","instagram+ads",
+    "atendimento+cliente","suporte+cliente","customer+success",
+    "gestao+crm","crm+empresa","relacionamento+cliente",
+    "consultoria+empresarial","consultoria+negocios","plano+negocios",
+    "business+plan","consultoria+startup","mentoria+negocios",
+]
+
+FREELAS99_QUERIES_DESIGN = [
+    "design+grafico","identidade+visual","criacao+logo","logo+marca",
+    "logotipo","branding","manual+marca","rebrand",
+    "ui+ux","design+ui","design+ux","interface+usuario","wireframe",
+    "prototipo+figma","design+figma","design+web","layout+site",
+    "design+landing+page","mockup+site",
+    "design+redes+sociais","posts+instagram","arte+instagram",
+    "design+banner","banner+digital","flyer+digital","artes+graficas",
+    "design+cartao+visita","cartao+visita+design","design+folder",
+    "design+catalogo","design+panfleto","embalagem+produto",
+    "motion+graphics","edicao+video","vinheta+animada","animacao+logo",
+    "edicao+reels","producao+video",
+    "ilustracao+digital","ilustracao+personagem","criacao+mascote",
+    "design+icone","icon+design",
+]
+
+def scrape_workana(page_start=1, page_end=WORKANA_MAX_PAGES, workana_cat="it-programming"):
     leads = []
     try:
         with sync_playwright() as pw:
@@ -101,7 +136,7 @@ def scrape_workana(page_start=1, page_end=WORKANA_MAX_PAGES):
             vistos = set()
 
             for p in range(page_start, page_end + 1):
-                url = f"https://www.workana.com/jobs?category=it-programming&language=pt&page={p}"
+                url = f"https://www.workana.com/jobs?category={workana_cat}&language=pt&page={p}"
                 page.goto(url, wait_until="networkidle", timeout=30000)
 
                 anchors = page.query_selector_all("a[href*='/job/']")
@@ -268,6 +303,27 @@ FREELAS99_QUERIES = [
     "dashboard+web","data+dashboard","build+dashboard","report+dashboard","analytics+dashboard"
 ]
 
+CATEGORIAS = {
+    "ti": {
+        "workana_cat": "it-programming",
+        "freelas":     FREELAS99_QUERIES,
+        "reddit":      ["brdev", "forhire", "slavelabour", "brasil"],
+        "github":      ["python freelance", "developer wanted", "landing page developer"],
+    },
+    "admin": {
+        "workana_cat": "administration",
+        "freelas":     FREELAS99_QUERIES_ADMIN,
+        "reddit":      ["forhire", "slavelabour", "brasil", "smallbusiness", "entrepreneur"],
+        "github":      [],
+    },
+    "design": {
+        "workana_cat": "design-multimedia",
+        "freelas":     FREELAS99_QUERIES_DESIGN,
+        "reddit":      ["forhire", "slavelabour", "graphic_design", "web_design", "brasil"],
+        "github":      ["designer wanted", "ui ux freelance", "design freelancer"],
+    },
+}
+
 
 def scrape_99freelas(queries=None):
     leads = []
@@ -366,45 +422,29 @@ def ja_visto(link):
         return False
 
 
-def _dividir_trabalho(n):
+def _dividir_trabalho(n, cat_config):
     """
-    Divide o trabalho dos scrapers em n fatias independentes.
-    Cada worker recebe páginas distintas do Workana, queries distintas
-    do 99Freelas, subreddits distintos e queries distintas do GitHub.
+    Divide 99Freelas / Reddit / GitHub da categoria em n fatias (round-robin).
+    Workana NÃO entra aqui — Playwright não é thread-safe e roda
+    separadamente em fase única antes dos workers paralelos.
     """
-    # Workana: blocos contíguos de páginas
-    cada = (WORKANA_MAX_PAGES + n - 1) // n          # teto da divisão
-    workana = []
-    for i in range(n):
-        start = i * cada + 1
-        end   = min((i + 1) * cada, WORKANA_MAX_PAGES)
-        workana.append((start, end) if start <= WORKANA_MAX_PAGES else None)
-
-    # 99Freelas / Reddit / GitHub: round-robin
-    freelas = [FREELAS99_QUERIES[i::n] for i in range(n)]
-    reddit  = [REDDIT_SUBS[i::n]       for i in range(n)]
-    github  = [GITHUB_QUERIES[i::n]    for i in range(n)]
+    freelas = [cat_config["freelas"][i::n] for i in range(n)]
+    reddit  = [cat_config["reddit"][i::n]  for i in range(n)]
+    github  = [cat_config["github"][i::n]  for i in range(n)]
 
     return [
-        {"workana": workana[i], "freelas": freelas[i],
-         "reddit":  reddit[i],  "github":  github[i]}
+        {"freelas": freelas[i], "reddit": reddit[i], "github": github[i]}
         for i in range(n)
     ]
 
-def _worker_completo(worker_id, key, pkg):
+def _worker_paralelo(worker_id, key, pkg, workana_lote):
     """
-    Worker independente: raspa sua fatia dos scrapers + gera propostas
-    com sua chave dedicada. Insere cada lead no dashboard em tempo real.
+    Worker paralelo (thread-safe): recebe sua fatia de leads Workana
+    já raspados + raspa 99Freelas/Reddit/GitHub de forma independente.
+    Gera propostas com sua chave dedicada e insere em state["leads"].
+    NÃO usa Playwright — só requests/BeautifulSoup (thread-safe).
     """
-    locais = []
-
-    # Workana — bloco de páginas exclusivo deste worker
-    if pkg["workana"]:
-        start, end = pkg["workana"]
-        state["log"].append(f"[W{worker_id}] Workana páginas {start}–{end}...")
-        leads = scrape_workana(page_start=start, page_end=end)
-        state["log"].append(f"[W{worker_id}] Workana: {len(leads)} leads")
-        locais.extend(leads)
+    locais = list(workana_lote)  # leads Workana já coletados na fase 1
 
     # 99Freelas — fatia de queries exclusiva deste worker
     if pkg["freelas"]:
@@ -431,7 +471,7 @@ def _worker_completo(worker_id, key, pkg):
         state["log"].append(f"[W{worker_id}] GitHub: {len(leads)} leads")
         locais.extend(leads)
 
-    # Filtra duplicatas (thread-safe via _vistos_lock)
+    # Filtra duplicatas globais (thread-safe via _vistos_lock)
     novos = [l for l in locais if not ja_visto(l["link"])]
     state["log"].append(
         f"[W{worker_id}] {len(novos)} leads novos → gerando propostas..."
@@ -455,7 +495,7 @@ def _worker_completo(worker_id, key, pkg):
     return len(novos)
 
 
-def rodar_scan():
+def rodar_scan(categoria='ti'):
     state["rodando"] = True
     state["log"]     = []
 
@@ -464,15 +504,28 @@ def rodar_scan():
         state["rodando"] = False
         return
 
-    n      = len(GROQ_API_KEYS)
-    pacotes = _dividir_trabalho(n)
+    cat_config = CATEGORIAS.get(categoria, CATEGORIAS["ti"])
+    n = len(GROQ_API_KEYS)
+
+    # ── FASE 1: Workana — Playwright não é thread-safe, roda sequencial ──
+    state["log"].append(f"Fase 1: Workana [{categoria}] (Playwright, sequencial)...")
+    workana_leads = scrape_workana(workana_cat=cat_config["workana_cat"])
+    state["log"].append(f"Fase 1 concluída — {len(workana_leads)} leads Workana")
+
+    # Distribui leads Workana entre os workers (round-robin)
+    workana_lotes = [workana_leads[i::n] for i in range(n)]
+
+    # ── FASE 2: 99Freelas / Reddit / GitHub — paralelo, thread-safe ──
+    pacotes = _dividir_trabalho(n, cat_config)
     state["log"].append(
-        f"Iniciando {n} worker(s) paralelo(s) — cada um raspa e gera independente"
+        f"Fase 2: {n} worker(s) paralelo(s) — 99Freelas, Reddit, GitHub + propostas"
     )
 
     with ThreadPoolExecutor(max_workers=n) as ex:
         futures = {
-            ex.submit(_worker_completo, i + 1, GROQ_API_KEYS[i], pacotes[i]): i + 1
+            ex.submit(
+                _worker_paralelo, i + 1, GROQ_API_KEYS[i], pacotes[i], workana_lotes[i]
+            ): i + 1
             for i in range(n)
         }
         for future in as_completed(futures):
@@ -504,11 +557,19 @@ def login():
 def register():
     return render_template("register.html")
 
+@app.route("/plans")
+def plans():
+    return render_template("plans.html")
+
 @app.route("/api/scan", methods=["POST"])
 def api_scan():
     if state["rodando"]:
         return jsonify({"ok": False, "msg": "Scan já está rodando"})
-    t = threading.Thread(target=rodar_scan, daemon=True)
+    data      = request.get_json(silent=True) or {}
+    categoria = data.get("categoria", "ti")
+    if categoria not in CATEGORIAS:
+        categoria = "ti"
+    t = threading.Thread(target=rodar_scan, args=(categoria,), daemon=True)
     t.start()
     return jsonify({"ok": True})
 

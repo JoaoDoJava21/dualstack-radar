@@ -31,24 +31,24 @@
 
       <!-- Item: Radar -->
       <div class="nav-item active" data-page="radar" onclick="setPage(this)">
-        <span class="ni">⚡</span> Radar
+        <span class="ni"></span> Radar
         <span class="badge green" id="live-count">0</span>
       </div>
 
       <!-- Item: Histórico -->
       <div class="nav-item" data-page="historico" onclick="setPage(this)">
-        <span class="ni">📋</span> Histórico
+        <span class="ni"></span> Histórico
         <span class="badge" id="hist-count">0</span>
       </div>
 
       <!-- Item: Template -->
       <div class="nav-item" data-page="template" onclick="setPage(this)">
-        <span class="ni">✏️</span> Template
+        <span class="ni"></span> Template
       </div>
 
       <!-- Item: Config -->
       <div class="nav-item" data-page="config" onclick="setPage(this)">
-        <span class="ni">⚙️</span> Config
+        <span class="ni"></span> Config
       </div>
 
       <!-- Rodapé: status do sistema -->
@@ -102,13 +102,13 @@
         <!-- Estatísticas -->
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-label"><span class="ico">🎯</span> Leads encontrados</div>
+            <div class="stat-label"><span class="ico"></span> Leads encontrados</div>
             <div class="stat-val purple" id="st-total">0</div>
             <div class="stat-sub">nesta sessão</div>
             <div class="stat-glow" style="background:var(--purple)"></div>
           </div>
           <div class="stat-card">
-            <div class="stat-label"><span class="ico">🤖</span> Propostas geradas</div>
+            <div class="stat-label"><span class="ico"></span> Propostas geradas</div>
             <div class="stat-val green" id="st-prop">0</div>
             <div class="stat-sub">pelo Groq / Llama 3.3</div>
             <div class="stat-glow" style="background:#10b981"></div>
@@ -120,16 +120,26 @@
             <div class="stat-glow" style="background:#3b82f6"></div>
           </div>
           <div class="stat-card">
-            <div class="stat-label"><span class="ico">💡</span> Intervalo</div>
+            <div class="stat-label"><span class="ico"></span> Intervalo</div>
             <div class="stat-val pink">30<span style="font-size:16px;color:var(--muted)">min</span></div>
             <div class="stat-sub">ciclo automático</div>
             <div class="stat-glow" style="background:#ec4899"></div>
           </div>
         </div>
 
+        <!-- Seletor de área -->
+        <div class="area-selector">
+          <div class="area-label">Área de busca</div>
+          <div class="area-pills">
+            <div class="area-pill active" data-area="ti" onclick="selecionarArea(this)"> TI / Programação</div>
+            <div class="area-pill" data-area="admin" onclick="selecionarArea(this)"> Administração</div>
+            <div class="area-pill" data-area="design" onclick="selecionarArea(this)"> Design</div>
+          </div>
+        </div>
+
         <!-- Filtros de plataforma -->
         <div class="platforms">
-          <div class="plat-pill on" onclick="togglePlat(this,'todos')">⚡ Todos</div>
+          <div class="plat-pill on" onclick="togglePlat(this,'todos')"> Todos</div>
           <div class="plat-pill on" onclick="togglePlat(this,'Workana')">🔵 Workana</div>
           <div class="plat-pill on" onclick="togglePlat(this,'99Freelas')">🟢 99Freelas</div>
           <div class="plat-pill on" onclick="togglePlat(this,'Reddit')">🟠 Reddit</div>
@@ -209,7 +219,7 @@ Tom: próximo e profissional. Termine com WhatsApp e portfólio.</pre>
         </div>
         <div class="leads-grid" id="leads-grid">
           <div class="empty" id="empty-state">
-            <div class="empty-icon">⚡</div>
+             
             <div class="empty-title">Nenhum lead ainda</div>
             <div class="empty-sub">Clique em "Iniciar Scan" para começar</div>
           </div>

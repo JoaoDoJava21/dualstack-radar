@@ -36,7 +36,7 @@
       <div class="auth-subtitle">Acesse o painel de leads da DualStack</div>
 
       <!-- Formulário -->
-      <form class="auth-form" onsubmit="return false">
+      <form class="auth-form" onsubmit="entrar(event)">
 
         <div class="form-group">
           <label class="form-label" for="email">E-mail</label>
@@ -77,6 +77,12 @@
   </div>
 
   <script src="../static/js/canvas.js"></script>
+  <script>
+    function entrar(e) {
+      e.preventDefault();
+      window.location.href = '/plans';
+    }
+  </script>
 
 </body>
 </html>

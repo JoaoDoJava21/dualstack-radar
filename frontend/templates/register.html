@@ -36,7 +36,7 @@
       <div class="auth-subtitle">Junte-se ao radar de leads da DualStack</div>
 
       <!-- Formulário -->
-      <form class="auth-form" onsubmit="return false">
+      <form class="auth-form" onsubmit="cadastrar(event)">
 
         <div class="form-group">
           <label class="form-label" for="name">Nome completo</label>
@@ -101,6 +101,12 @@
   </div>
 
   <script src="../static/js/canvas.js"></script>
+  <script>
+    function cadastrar(e) {
+      e.preventDefault();
+      window.location.href = '/plans';
+    }
+  </script>
 
 </body>
 </html>

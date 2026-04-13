@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planos — DualStack Radar</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../static/css/base.css">
+  <link rel="stylesheet" href="../static/css/animations.css">
+  <link rel="stylesheet" href="../static/css/plans.css">
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="plans-shell">
+
+    <!-- Cabeçalho -->
+    <div class="plans-header">
+      <div class="plans-logo">
+        <img src="../static/logo.png" alt="DualStack" style="width:34px;height:34px;object-fit:contain;">
+        <span><b>DualStack</b></span>
+      </div>
+      <div class="plans-title">Escolha seu <span>plano</span></div>
+      <div class="plans-sub">Selecione o modelo que melhor se encaixa no seu negócio</div>
+    </div>
+
+    <!-- Toggle B2B / B2C -->
+    <div class="plans-toggle">
+      <button class="toggle-btn active" data-type="b2b" onclick="setType(this)">
+         B2B — Empresas
+      </button>
+      <button class="toggle-btn" data-type="b2c" onclick="setType(this)">
+         B2C — Freelancers
+      </button>
+    </div>
+
+    <!-- ── Cards B2B ── -->
+    <div class="plans-grid" id="plans-b2b">
+
+      <div class="plan-card">
+        <div class="plan-tier starter">Starter</div>
+        <div class="plan-price">
+          <span class="price-currency">R$</span>
+          <span class="price-value">1.500</span>
+          <span class="price-period">/mês</span>
+        </div>
+        <div class="plan-desc">Ideal para pequenas equipes iniciando a prospecção automatizada.</div>
+        <ul class="plan-features">
+          <li class="on">Até 500 leads por mês</li>
+          <li class="on">2 chaves Groq IA simultâneas</li>
+          <li class="on">Workana + 99Freelas</li>
+          <li class="on">Propostas automáticas</li>
+          <li class="off">Reddit + GitHub</li>
+          <li class="off">Suporte dedicado</li>
+        </ul>
+        <button class="plan-btn" onclick="selecionarPlano('B2B', 'Starter', 1500)">
+          <span>Selecionar plano</span>
+        </button>
+      </div>
+
+      <div class="plan-card featured">
+        <div class="plan-popular">Mais popular</div>
+        <div class="plan-tier pro">Professional</div>
+        <div class="plan-price">
+          <span class="price-currency">R$</span>
+          <span class="price-value">3.000</span>
+          <span class="price-period">/mês</span>
+        </div>
+        <div class="plan-desc">Para times de vendas que precisam de volume e IA avançada.</div>
+        <ul class="plan-features">
+          <li class="on">Até 2.000 leads por mês</li>
+          <li class="on">4 chaves Groq IA simultâneas</li>
+          <li class="on">Todas as plataformas</li>
+          <li class="on">Propostas avançadas com IA</li>
+          <li class="on">Histórico completo</li>
+          <li class="off">Suporte dedicado</li>
+        </ul>
+        <button class="plan-btn featured-btn" onclick="selecionarPlano('B2B', 'Professional', 3000)">
+          <span>Selecionar plano</span>
+        </button>
+      </div>
+
+      <div class="plan-card">
+        <div class="plan-tier enterprise">Enterprise</div>
+        <div class="plan-price">
+          <span class="price-currency">R$</span>
+          <span class="price-value">5.000</span>
+          <span class="price-period">/mês</span>
+        </div>
+        <div class="plan-desc">Solução completa para grandes operações comerciais sem limite.</div>
+        <ul class="plan-features">
+          <li class="on">Leads ilimitados</li>
+          <li class="on">8 chaves Groq IA simultâneas</li>
+          <li class="on">Todas as plataformas</li>
+          <li class="on">IA personalizada por nicho</li>
+          <li class="on">Histórico completo</li>
+          <li class="on">Suporte dedicado 24/7</li>
+        </ul>
+        <button class="plan-btn" onclick="selecionarPlano('B2B', 'Enterprise', 5000)">
+          <span>Selecionar plano</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ── Cards B2C ── -->
+    <div class="plans-grid" id="plans-b2c" style="display:none">
+
+      <div class="plan-card">
+        <div class="plan-tier starter">Starter</div>
+        <div class="plan-price">
+          <span class="price-currency">R$</span>
+          <span class="price-value">250</span>
+          <span class="price-period">/mês</span>
+        </div>
+        <div class="plan-desc">Perfeito para freelancers que estão começando a captar clientes.</div>
+        <ul class="plan-features">
+          <li class="on">Até 100 leads por mês</li>
+          <li class="on">1 chave Groq IA</li>
+          <li class="on">99Freelas + Reddit</li>
+          <li class="on">Propostas automáticas</li>
+          <li class="off">Workana + GitHub</li>
+          <li class="off">Suporte prioritário</li>
+        </ul>
+        <button class="plan-btn" onclick="selecionarPlano('B2C', 'Starter', 250)">
+          <span>Selecionar plano</span>
+        </button>
+      </div>
+
+      <div class="plan-card featured">
+        <div class="plan-popular">Mais popular</div>
+        <div class="plan-tier pro">Professional</div>
+        <div class="plan-price">
+          <span class="price-currency">R$</span>
+          <span class="price-value">500</span>
+          <span class="price-period">/mês</span>
+        </div>
+        <div class="plan-desc">Para freelancers que querem crescer com volume e qualidade de leads.</div>
+        <ul class="plan-features">
+          <li class="on">Até 500 leads por mês</li>
+          <li class="on">2 chaves Groq IA simultâneas</li>
+          <li class="on">Todas as plataformas</li>
+          <li class="on">Propostas avançadas com IA</li>
+          <li class="on">Histórico completo</li>
+          <li class="off">Suporte prioritário</li>
+        </ul>
+        <button class="plan-btn featured-btn" onclick="selecionarPlano('B2C', 'Professional', 500)">
+          <span>Selecionar plano</span>
+        </button>
+      </div>
+
+      <div class="plan-card">
+        <div class="plan-tier enterprise">Enterprise</div>
+        <div class="plan-price">
+          <span class="price-currency">R$</span>
+          <span class="price-value">799</span>
+          <span class="price-period">/mês</span>
+        </div>
+        <div class="plan-desc">Para freelancers de alta performance que precisam do máximo.</div>
+        <ul class="plan-features">
+          <li class="on">Leads ilimitados</li>
+          <li class="on">4 chaves Groq IA simultâneas</li>
+          <li class="on">Todas as plataformas</li>
+          <li class="on">IA personalizada por nicho</li>
+          <li class="on">Histórico completo</li>
+          <li class="on">Suporte prioritário</li>
+        </ul>
+        <button class="plan-btn" onclick="selecionarPlano('B2C', 'Enterprise', 799)">
+          <span>Selecionar plano</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Rodapé -->
+    <div class="plans-footer">
+      Já tem conta? <a href="/login">Entrar</a> &nbsp;·&nbsp; Dúvidas? <a href="#">Falar com a equipe</a>
+    </div>
+
+  </div>
+
+  <script src="../static/js/canvas.js"></script>
+  <script>
+    function setType(btn) {
+      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const type = btn.dataset.type;
+      document.getElementById('plans-b2b').style.display = type === 'b2b' ? 'grid' : 'none';
+      document.getElementById('plans-b2c').style.display = type === 'b2c' ? 'grid' : 'none';
+    }
+
+    function selecionarPlano(tipo, nome, valor) {
+      // Salva a escolha localmente para exibir no dashboard
+      localStorage.setItem('plano', JSON.stringify({ tipo, nome, valor }));
+      window.location.href = '/';
+    }
+  </script>
+
+</body>
+</html>
